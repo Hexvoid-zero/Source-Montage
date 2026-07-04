@@ -1,3 +1,4 @@
+<div align="center">
 # ▣ Source Montage
 
 Source Montage is a premium standalone desktop video editing companion and timeline automation suite designed to automate video editing workflows. Featuring a native desktop wrapper, real-time media importing, timeline automation, and integration with advanced AI models, Source Montage provides a powerful companion panel that can control the timeline programmatically or via natural language chat.

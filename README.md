@@ -1,5 +1,6 @@
 <div align="center">
-# ▣ Source Montage
+   
+## ▣ Source Montage
 
 Source Montage is a premium standalone desktop video editing companion and timeline automation suite designed to automate video editing workflows. Featuring a native desktop wrapper, real-time media importing, timeline automation, and integration with advanced AI models, Source Montage provides a powerful companion panel that can control the timeline programmatically or via natural language chat.
 
@@ -8,10 +9,10 @@ Source Montage is a premium standalone desktop video editing companion and timel
 <div align="left">
 ---
 
-## 🚀 Key Features
+##  Key Features
 
 *   **Dual-Model AI Agent Routing**:
-    *   **🤖 Source Editor**: Directs complex timeline modification tasks to `gemma4:31b-cloud` via local Ollama wrappers, interpreting natural language commands (e.g., *"cinematic styling"*, *"auto-montage"*, *"split clip"*) and executing them on the active timeline.
+    *   ** Source Editor**: Directs complex timeline modification tasks to `gemma4:31b-cloud` via local Ollama wrappers, interpreting natural language commands (e.g., *"cinematic styling"*, *"auto-montage"*, *"split clip"*) and executing them on the active timeline.
     *   **✦ Source Gen 1.0**: Bypasses the LLM entirely, sending text prompts directly to high-fidelity image and video generation backends. It parses aspect ratios (16:9, 9:16, 1:1) from prompts, generates the media, imports it, and appends it to the active timeline automatically.
 *   **AI Generation Backend & Fallback Chain**:
     *   **Video Generation**: MiniMax API (`video-01`) ➔ Replicate Fallback (`minimax/video-01` predictions).
@@ -25,7 +26,7 @@ Source Montage is a premium standalone desktop video editing companion and timel
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 Source Montage/
@@ -50,7 +51,7 @@ Source Montage/
 
 ---
 
-## 🛠️ Getting Started
+##  Getting Started
 
 ### Prerequisites
 1.  **Python 3.10+** (Ensure Python is added to your system `PATH`).
@@ -78,7 +79,7 @@ Source Montage/
 
 ---
 
-## 📦 Building the Standalone Executable
+##  Building the Standalone Executable
 
 The application can be compiled into a single directory containing a native `.exe` with fast startup and bundled python dependencies.
 
@@ -92,7 +93,7 @@ The application can be compiled into a single directory containing a native `.ex
 
 ---
 
-## 🚀 Deploying the Landing Page to Vercel
+##  Deploying the Landing Page to Vercel
 
 The marketing landing page (located in the `/studio` directory) is designed to be hosted on Vercel.
 

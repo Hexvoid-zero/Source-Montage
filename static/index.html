@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Source Montage</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <!-- title bar -->
+  <div class="titlebar">
+    <div class="tl-dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+    <div class="title-center">
+      <select id="projectSelect" title="Project"></select> <span> — Source Montage</span>
+    </div>
+    <div class="tb-right">
+      <button class="tb-btn" id="newProject" title="New project">＋ New</button>
+      <button class="tb-btn" id="themeToggle" title="Toggle light / dark">☾</button>
+      <span class="expert-pill" id="mcpChip" title="Any MCP client can edit this timeline">⚡ MCP</span>
+      <button class="tb-btn accent" id="exportBtn">⬇ Export</button>
+      <div class="avatar">M</div>
+    </div>
+  </div>
+
+  <!-- app body split -->
+  <div class="app-body">
+    <!-- chat / agent -->
+    <aside class="pane chat">
+      <div class="pane-head">🤖 Agent
+        <select id="modelSelect" style="margin-left:6px;font-size:11px;background:var(--panel2);border:1px solid var(--edge);border-radius:4px;padding:2px 6px;color:var(--text);cursor:pointer;">
+          <option value="Source Editor">Source Editor</option>
+          <option value="Source Gen 1.0">Source Gen 1.0</option>
+        </select>
+        <span class="mono" id="agentModel"></span>
+      </div>
+      <div class="chat-log" id="agentLog">
+        <div class="ag-hint">Edit the timeline by chat — same tools MCP exposes. Try:
+          <button class="ag-suggest" data-q="Add all my media to the timeline in order, apply a cinematic look to the first clip, put a centered title 'Aesthetic' on the first 3 seconds, then export.">auto-montage · cinematic · title · export</button>
+        </div>
+      </div>
+      <div class="composer">
+        <textarea id="agentInput" rows="2" placeholder="Ask, or type @ to reference media"></textarea>
+        <button id="agentSend">↑</button>
+      </div>
+    </aside>
+
+    <!-- right-side main layout -->
+    <div class="main-layout">
+      <!-- workspace -->
+      <div class="workspace">
+        <!-- media browser -->
+        <section class="pane browser">
+          <div class="browser-toolbar">
+            <label class="bt" title="Import media">⬆ Import<input type="file" id="fileInput" multiple hidden accept="video/*,image/*,audio/*" /></label>
+            <button class="bt" id="newFolderBtn">⊞ New Folder</button>
+            <button class="bt" id="generateBtn">✦ Generate</button>
+            <span class="bt search">🔍 <input id="mediaSearch" placeholder="Search" /></span>
+          </div>
+          <div class="browser-sub"><span id="itemCount">0 items</span><span>▦</span></div>
+          <div class="media-grid" id="mediaGrid"></div>
+        </section>
+
+        <!-- viewer -->
+        <section class="pane viewer">
+          <div class="viewer-tabs"><span class="tab">Timeline</span></div>
+          <div class="stage">
+            <video id="player" controls hidden></video>
+            <div class="stage-empty" id="previewEmpty">
+              <div class="se-mark">▣</div>
+              <p>Build the timeline, then <b>Export</b> to preview the render here.<br>
+                 Or tell the agent → <i>"make a 10-second montage with a cinematic look"</i></p>
+            </div>
+          </div>
+          <div class="transport">
+            <button title="Start">⏮</button><button title="Back">◀◀</button>
+            <button id="playBtn" title="Play">▶</button><button title="Forward">▶▶</button><button title="End">⏭</button>
+            <span class="tc" id="timecode">00:00:00:00 <span class="sep">/</span> <span id="tcTotal">00:00:00:00</span></span>
+          </div>
+        </section>
+
+        <!-- inspector -->
+        <aside class="pane inspector">
+          <div class="pane-head">Timeline</div>
+          <div class="insp-body" id="inspector"></div>
+        </aside>
+      </div>
+
+  <!-- timeline dock -->
+  <div class="dock">
+    <div class="dock-tools">
+      <button class="tool" title="Select">▸</button>
+      <button class="tool" title="Blade (split)" id="bladeTool">✂</button>
+      <button class="tool" title="Trim">[ ]</button>
+      <button class="tool" title="Add text">T</button>
+      <span class="sp"></span>
+      <span class="mono" id="tlDur" style="color:var(--accent);margin-right:14px">0.0s</span>
+      <div class="zoom">－ <input type="range" id="zoom" min="60" max="300" value="120" /> ＋</div>
+    </div>
+    <div class="ruler" id="ruler"></div>
+    <div class="tracks" id="tracks">
+      <div class="track"><div class="track-label">V1</div><div class="lane" id="laneV1" data-track="v"></div></div>
+      <div class="track"><div class="track-label">A1</div><div class="lane" id="laneA1" data-track="a"></div></div>
+      <div class="track"><div class="track-label">A2</div><div class="lane" id="laneA2" data-track="a2"></div></div>
+      <div class="playhead" id="playhead"></div>
+    </div>
+    <!-- kept for legacy render targets -->
+    <div id="textsRow" hidden></div><div id="binList" hidden></div><div id="timeline" hidden></div>
+  </div>
+
+  </div> <!-- /main-layout -->
+  </div> <!-- /app-body -->
+
+  <div class="toast" id="toast" hidden></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

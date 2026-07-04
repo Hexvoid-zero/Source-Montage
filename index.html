@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Source Montage — the world's best video timeline, built for AIs</title>
+<link rel="shortcut icon" href="favicon.ico?v=2" type="image/x-icon" />
+<link rel="icon" href="favicon.png?v=2" type="image/png" />
+<link rel="apple-touch-icon" href="favicon.png?v=2" />
+<meta name="description" content="Source Montage is a video editor whose first-class user is an AI. Connect any MCP client and it cuts, grades, captions, and renders — right in the timeline." />
+<meta property="og:title" content="Source Montage" />
+<meta property="og:description" content="The world's best video timeline, built for AIs. Powered by MCP + ffmpeg." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#0B0908; --panel:#161413; --card:#24211F; --edge:#35312E;
+  --text:#F5F2EF; --muted:#8D8580; --accent:#F59E0B;
+  --sans:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.6;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+::selection{background:rgba(245,158,11,.3)}
+
+/* ---------- backdrop: grid + noise + orbs ---------- */
+.backdrop{position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background-image:linear-gradient(rgba(245,242,239,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(245,242,239,.025) 1px,transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 30%,transparent 75%)}
+.noise{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0}
+
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+  background:rgba(11,9,8,.72);border-bottom:1px solid rgba(53,49,46,.6)}
+.nav-in{max-width:1080px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;letter-spacing:-.2px}
+.mark{width:28px;height:28px;object-fit:contain;display:inline-block;vertical-align:middle}
+.nav-r{display:flex;align-items:center;gap:22px;font-size:14px}
+.nav-r a.ghost{color:var(--muted);transition:color .2s}
+.nav-r a.ghost:hover{color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#0B0908;font-weight:600;font-size:14px;
+  border:none;border-radius:10px;padding:9px 18px;cursor:pointer;transition:transform .15s,box-shadow .2s;font-family:var(--sans)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(245,158,11,.35)}
+.btn.lg{padding:13px 26px;font-size:15px;border-radius:12px}
+.btn.outline{background:transparent;color:var(--text);border:1px solid var(--edge)}
+.btn.outline:hover{border-color:var(--accent);box-shadow:none;color:var(--accent)}
+
+/* ---------- hero ---------- */
+.hero{padding:96px 0 60px;text-align:center;position:relative}
+.hero .orb.a{width:560px;height:560px;left:50%;top:-140px;transform:translateX(-50%);background:rgba(245,158,11,.13)}
+.hero .orb.b{width:340px;height:340px;left:8%;top:280px;background:rgba(180,83,9,.10)}
+.pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;letter-spacing:.6px;color:var(--accent);
+  background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.30);border-radius:999px;padding:6px 15px;margin-bottom:28px}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-size:clamp(42px,7vw,74px);font-weight:700;line-height:1.03;letter-spacing:-2.5px}
+h1 .grad{background:linear-gradient(100deg,#FBBF24,var(--accent) 45%,#D97706);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{max-width:620px;margin:22px auto 0;color:var(--muted);font-size:18px;line-height:1.65}
+.hero-cta{display:flex;gap:14px;justify-content:center;margin-top:34px}
+
+/* ---------- demo card ---------- */
+.demo-zone{position:relative;margin:74px auto 0;max-width:480px}
+.demo-glow{position:absolute;inset:-46px;border-radius:32px;z-index:0;
+  background:radial-gradient(ellipse at 50% 45%,rgba(245,158,11,.22),rgba(245,158,11,.05) 55%,transparent 75%);
+  animation:breathe 5s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.8}50%{opacity:1.0}}
+.demo{position:relative;z-index:1;background:var(--panel);border:1px solid var(--edge);border-radius:20px;text-align:left;
+  box-shadow:0 1px 0 rgba(245,242,239,.06) inset,0 30px 80px rgba(0,0,0,.55),0 0 0 1px rgba(245,158,11,.06);overflow:hidden}
+.demo-tb{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--edge);background:rgba(36,33,31,.5)}
+.demo-tb i{width:11px;height:11px;border-radius:50%;display:block}
+.demo-tb .r{background:#8a4a42}.demo-tb .y{background:#8a7742}.demo-tb .g{background:#5d7a4d}
+.demo-tb .pname{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--muted);transition:opacity .3s}
+.demo-body{padding:18px 18px 16px;min-height:266px}
+.chatline{display:flex;gap:10px;align-items:flex-start}
+.chatline .av{flex-shrink:0;width:26px;height:26px;border-radius:8px;background:var(--card);border:1px solid var(--edge);
+  display:grid;place-items:center;font-size:13px}
+.bubble{background:var(--card);border:1px solid var(--edge);border-radius:4px 12px 12px 12px;padding:9px 13px;font-size:13.5px;
+  color:var(--text);min-height:38px}
+.bubble .caret{display:inline-block;width:7px;height:15px;background:var(--accent);vertical-align:-2px;margin-left:2px;animation:pulse 1s infinite}
+.mini-tl{margin-top:16px;background:var(--bg);border:1px solid var(--edge);border-radius:12px;padding:12px 12px 10px}
+.mini-tl .ruler{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted);
+  padding:0 2px 7px;border-bottom:1px solid var(--edge);margin-bottom:9px}
+.lane{display:flex;gap:5px;align-items:center;margin-bottom:7px;height:26px}
+.lane .lb{font-family:var(--mono);font-size:9px;color:var(--muted);width:18px;flex-shrink:0}
+.clip{height:24px;border-radius:6px;background:linear-gradient(180deg,#3A2F18,#261F10);border:1px solid rgba(245,158,11,.35);
+  display:flex;align-items:center;padding:0 8px;font-family:var(--mono);font-size:9px;color:#e9d8b8;white-space:nowrap;overflow:hidden;
+  width:0;opacity:0;transition:width .55s cubic-bezier(.2,.8,.2,1),opacity .4s}
+.clip.in{opacity:1}
+.clip.fx{box-shadow:0 0 10px rgba(245,158,11,.35);border-color:var(--accent)}
+.aclip{background:linear-gradient(180deg,#26211a,#1a1712);border-color:var(--edge);color:var(--muted)}
+.ph{position:relative}
+.ph .head{position:absolute;top:-4px;bottom:2px;width:1.5px;background:var(--accent);left:8%;border-radius:2px;
+  box-shadow:0 0 8px rgba(245,158,11,.8);transition:left 3.4s linear}
+.ph .head::before{content:"";position:absolute;top:-5px;left:-4.25px;border:5px solid transparent;border-top-color:var(--accent)}
+.demo-foot{display:flex;align-items:center;justify-content:space-between;margin-top:15px;font-size:12px}
+.fxchip{display:inline-flex;gap:6px;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--accent);
+  background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.28);border-radius:999px;padding:3px 10px;opacity:0;transition:opacity .4s}
+.fxchip.in{opacity:1}
+.rstat{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.rstat b{color:var(--accent);font-weight:500}
+.demo-dots{display:flex;gap:8px;justify-content:center;margin-top:22px}
+.demo-dots i{width:7px;height:7px;border-radius:50%;background:var(--edge);cursor:pointer;transition:background .3s,transform .3s}
+.demo-dots i.on{background:var(--accent);transform:scale(1.25)}
+.demo-note{margin-top:14px;font-size:13px;color:var(--muted);text-align:center}
+
+/* ---------- sections ---------- */
+section{padding:104px 0;position:relative}
+section+section{border-top:1px solid rgba(53,49,46,.5)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+h2{font-size:clamp(30px,4.4vw,44px);font-weight:700;letter-spacing:-1.4px;line-height:1.12}
+.lead{color:var(--muted);font-size:17px;max-width:560px;margin-top:14px}
+.center{text-align:center}
+.center .lead{margin-left:auto;margin-right:auto}
+
+/* feature grid */
+.grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px}
+.fcard{background:var(--panel);border:1px solid var(--edge);border-radius:16px;padding:26px 24px;transition:border-color .25s,transform .25s}
+.fcard:hover{border-color:rgba(245,158,11,.45);transform:translateY(-3px)}
+.fcard .ic{width:40px;height:40px;border-radius:11px;background:var(--card);border:1px solid var(--edge);
+  display:grid;place-items:center;margin-bottom:16px;color:var(--accent)}
+.fcard h3{font-size:16px;font-weight:600;margin-bottom:7px;letter-spacing:-.2px}
+.fcard p{font-size:14px;color:var(--muted);line-height:1.6}
+
+/* split rows */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;margin-top:8px}
+.split .lead{margin-top:16px}
+.checks{margin-top:26px;display:grid;gap:13px}
+.checks li{list-style:none;display:flex;gap:12px;align-items:flex-start;font-size:15px;color:var(--text)}
+.checks li i{flex-shrink:0;width:20px;height:20px;border-radius:50%;margin-top:2px;display:grid;place-items:center;
+  background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:var(--accent);font-size:11px;font-style:normal}
+.checks li span{color:var(--muted)}
+.checks li b{color:var(--text);font-weight:600}
+
+/* terminal */
+.term{background:#080706;border:1px solid var(--edge);border-radius:16px;overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 0 1px rgba(245,158,11,.05)}
+.term-tb{display:flex;align-items:center;gap:8px;padding:12px 15px;border-bottom:1px solid var(--edge);background:var(--panel)}
+.term-tb i{width:10px;height:10px;border-radius:50%}
+.term-tb .r{background:#8a4a42}.term-tb .y{background:#8a7742}.term-tb .g{background:#5d7a4d}
+.term-tb span{margin-left:8px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.term-body{padding:18px;font-family:var(--mono);font-size:13px;line-height:1.85;color:#e9d8b8;position:relative;word-break:break-all}
+.term-body .cm{color:var(--muted)}
+.term-body .amber{color:var(--accent)}
+.copy{position:absolute;top:12px;right:12px;background:var(--card);color:var(--text);border:1px solid var(--edge);
+  border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:var(--sans);transition:border-color .2s}
+.copy:hover{border-color:var(--accent)}
+.urlrow{display:flex;gap:10px;flex-wrap:wrap;margin:26px 0 18px}
+.urlrow input{flex:1;min-width:250px;background:var(--panel);border:1px solid var(--edge);border-radius:11px;padding:12px 16px;
+  color:var(--text);font-size:14px;font-family:var(--mono);transition:border-color .2s;outline:none}
+.urlrow input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,158,11,.14)}
+.mcp-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.mcp-tools span{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel);
+  border:1px solid var(--edge);border-radius:999px;padding:4px 12px;transition:color .2s,border-color .2s}
+.mcp-tools span:hover{color:var(--accent);border-color:rgba(245,158,11,.4)}
+
+/* customization / themes */
+.theme-demo{background:var(--panel);border:1px solid var(--edge);border-radius:18px;padding:24px;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.theme-prev{border-radius:12px;border:1px solid var(--edge);overflow:hidden;transition:background .4s}
+.tp-bar{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--edge)}
+.tp-bar i{width:9px;height:9px;border-radius:50%;background:var(--edge)}
+.tp-body{padding:16px;display:grid;gap:9px}
+.tp-row{height:13px;border-radius:5px}
+.theme-ctl{display:flex;gap:10px;margin-top:18px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:3px}
+.seg button{background:transparent;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:500;
+  padding:7px 16px;border-radius:8px;cursor:pointer;transition:all .2s}
+.seg button.on{background:var(--card);color:var(--accent)}
+.swatches{display:flex;gap:8px}
+.swatches i{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s}
+.swatches i:hover{transform:scale(1.15)}
+.swatches i.on{border-color:var(--text)}
+
+/* effects marquee */
+.marquee{overflow:hidden;margin-top:48px;position:relative;
+  mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.mq-track{display:flex;gap:12px;width:max-content;animation:mq 30s linear infinite}
+.marquee:hover .mq-track{animation-play-state:paused}
+@keyframes mq{to{transform:translateX(-50%)}}
+.fx-tile{flex-shrink:0;background:var(--panel);border:1px solid var(--edge);border-radius:13px;padding:14px 20px;text-align:center}
+.fx-tile .sw{width:104px;height:58px;border-radius:8px;margin-bottom:10px;border:1px solid var(--edge);
+  background:linear-gradient(135deg,#3A2F18 0%,#261F10 60%,#1a1510 100%);position:relative;overflow:hidden}
+.fx-tile .sw::after{content:"";position:absolute;inset:0}
+.fx-tile span{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* security / local */
+.radar{position:relative;width:100%;max-width:380px;aspect-ratio:1;margin:0 auto}
+.radar .ring{position:absolute;border:1px solid rgba(245,158,11,.18);border-radius:50%}
+.radar .sweep{position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  background:conic-gradient(from 0deg,rgba(245,158,11,.28),transparent 70deg,transparent);animation:sweep 4.5s linear infinite}
+@keyframes sweep{to{transform:rotate(360deg)}}
+.radar .core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:70px;height:70px;border-radius:20px;
+  background:var(--panel);border:1px solid rgba(245,158,11,.5);display:grid;place-items:center;font-size:28px;z-index:2;
+  box-shadow:0 0 40px rgba(245,158,11,.25)}
+.radar .blip{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 2.4s infinite}
+
+/* quotes */
+.quotes{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:52px}
+.quote{background:var(--panel);border:1px solid var(--edge);border-radius:16px;padding:30px}
+.quote p{font-size:16.5px;line-height:1.65;letter-spacing:-.1px}
+.quote p em{color:var(--accent);font-style:normal}
+.qwho{display:flex;align-items:center;gap:13px;margin-top:22px}
+.qwho .qa{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#0B0908;
+  background:linear-gradient(135deg,#FBBF24,#B45309)}
+.qwho b{display:block;font-size:14px}
+.qwho span{font-size:12.5px;color:var(--muted)}
+
+/* CTA */
+.cta{position:relative;text-align:center;padding:120px 0 130px}
+.cta .orb.c{width:640px;height:400px;left:50%;top:40px;transform:translateX(-50%);background:rgba(245,158,11,.10)}
+.cta .btns{display:flex;gap:14px;justify-content:center;margin-top:36px}
+
+/* footer */
+footer{border-top:1px solid rgba(53,49,46,.6);padding:44px 0;font-size:13.5px;color:var(--muted)}
+.foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.foot .fl{display:flex;gap:22px}
+.foot a:hover{color:var(--accent)}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+
+@media(max-width:880px){
+  .grid6{grid-template-columns:1fr 1fr}
+  .split{grid-template-columns:1fr;gap:40px}
+  .quotes{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .grid6{grid-template-columns:1fr}
+  .hero{padding:64px 0 40px}
+  section{padding:72px 0}
+  .nav-r a.ghost{display:none}
+  h1{letter-spacing:-1.5px}
+}
+</style>
+</head>
+<body>
+<div class="backdrop"></div><div class="noise"></div>
+
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="#"><img class="mark" src="favicon.png" alt="Source Montage Logo" /> Source Montage</a>
+    <div class="nav-r">
+      <a class="ghost" href="#connect">Connect</a>
+      <a class="ghost" href="#effects">Effects</a>
+      <a class="ghost" href="#local">Local-first</a>
+      <a class="btn" href="#connect">Get started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ======================= HERO ======================= -->
+<header class="hero">
+  <span class="orb a"></span><span class="orb b"></span>
+  <div class="wrap">
+    <span class="pill"><span class="dot"></span> MCP SERVER · 16 TOOLS · FFMPEG RENDER</span>
+    <h1>The world's best<br><span class="grad">video timeline</span>,<br>built for AIs.</h1>
+    <p class="sub">Source Montage is a real timeline editor whose first-class user is an AI.
+      Connect Claude Code, Cursor, or any MCP client — it imports, cuts, grades,
+      captions, and renders while you watch.</p>
+    <div class="hero-cta">
+      <a class="btn lg" href="#connect">Connect your agent</a>
+      <a class="btn lg outline" href="#how">See how it works</a>
+    </div>
+
+    <!-- cycling demo card -->
+    <div class="demo-zone">
+      <div class="demo-glow"></div>
+      <div class="demo">
+        <div class="demo-tb"><i class="r"></i><i class="y"></i><i class="g"></i><span class="pname" id="dName">Travel Reel — Source Montage</span></div>
+        <div class="demo-body">
+          <div class="chatline">
+            <span class="av">🤖</span>
+            <div class="bubble"><span id="dChat"></span><span class="caret" id="dCaret"></span></div>
+          </div>
+          <div class="mini-tl">
+            <div class="ruler"><span>00:00</span><span>00:02</span><span>00:04</span><span>00:06</span><span>00:08</span></div>
+            <div class="ph"><span class="head" id="dHead"></span>
+              <div class="lane"><span class="lb">V1</span><span class="clip" id="c1"></span><span class="clip" id="c2"></span><span class="clip" id="c3"></span></div>
+              <div class="lane"><span class="lb">A1</span><span class="clip aclip" id="c4"></span></div>
+            </div>
+          </div>
+          <div class="demo-foot">
+            <span class="fxchip" id="dFx">✦ cinematic</span>
+            <span class="rstat" id="dStat">timeline empty</span>
+          </div>
+        </div>
+      </div>
+      <div class="demo-dots" id="dDots"><i class="on"></i><i></i><i></i></div>
+      <p class="demo-note">Three agents, three edits — no timeline was touched by a human.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ======================= FEATURES ======================= -->
+<section id="how">
+  <div class="wrap center rv">
+    <p class="eyebrow">Everything a cutting room needs</p>
+    <h2>A full editor behind every tool call</h2>
+    <p class="lead">Sixteen MCP tools cover the whole craft — the same engine drives the in-app agent, the REST API, and your MCP client.</p>
+    <div class="grid6">
+      <div class="fcard rv"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="5" rx="1.5"/><rect x="2" y="15" width="12" height="5" rx="1.5"/></svg></div><h3>Real timeline</h3><p>V1/A1/A2 tracks with trim, split, move, and reorder — clip-accurate to the frame.</p></div>
+      <div class="fcard rv"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.1 6.4L21 12l-6.9 2.6L12 21l-2.1-6.4L3 12l6.9-2.6z"/></svg></div><h3>20 cinematic effects</h3><p>Cinematic grade, glow, vignette, Ken Burns, sepia, fades — applied per clip, rendered for real.</p></div>
+      <div class="fcard rv"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l-6-6 6-6M15 6l6 6-6 6"/></svg></div><h3>MCP-native</h3><p>An HTTP MCP server is the front door, not an add-on. Any agent edits the same project you see.</p></div>
+      <div class="fcard rv"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><h3>Agent chat</h3><p>A built-in local agent (Ollama) speaks the same tools — describe the cut, watch it happen.</p></div>
+      <div class="fcard rv"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div><h3>ffmpeg render</h3><p>One-pass flatten to clean mp4 — titles, effects, and audio mixed exactly as the timeline says.</p></div>
+      <div class="fcard rv"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><h3>Local-first</h3><p>Your media never leaves your machine. No cloud, no upload, no per-minute pricing.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= CONNECT / TERMINAL ======================= -->
+<section id="connect">
+  <div class="wrap">
+    <div class="split">
+      <div class="rv">
+        <p class="eyebrow">Extensible by design</p>
+        <h2>One command connects any agent</h2>
+        <p class="lead">Launch <b style="color:var(--text)">SourceMontage.exe</b> and the MCP server is live on your machine.
+          Want a remote agent to reach it? Run <span style="font-family:var(--mono);font-size:14px;color:var(--accent)">serve-public.ps1</span> —
+          it prints a free public https URL. Paste it below.</p>
+        <div class="urlrow">
+          <input id="url" placeholder="https://your-name.trycloudflare.com" autocomplete="off" spellcheck="false" />
+          <button class="btn" id="gen">Generate</button>
+        </div>
+        <ul class="checks">
+          <li><i>✓</i><span><b>Local by default</b> — 127.0.0.1:19790/mcp, zero setup</span></li>
+          <li><i>✓</i><span><b>Public when you want</b> — free Cloudflare quick tunnel</span></li>
+          <li><i>✓</i><span><b>Works everywhere</b> — Claude Code, Cursor, any MCP client</span></li>
+        </ul>
+      </div>
+      <div class="rv">
+        <div class="term">
+          <div class="term-tb"><i class="r"></i><i class="y"></i><i class="g"></i><span>connect — zsh · bash · pwsh</span></div>
+          <div class="term-body">
+            <button class="copy" id="copy">Copy</button>
+            <span class="cm"># add Source Montage to your MCP client</span><br>
+            <span class="amber">$</span> <span id="cmd">claude mcp add --transport http source-montage http://127.0.0.1:19790/mcp</span><br><br>
+            <span class="cm"># then just ask:</span><br>
+            <span class="amber">&gt;</span> make a 10-second montage with a cinematic<br>&nbsp;&nbsp;look and a centered title
+          </div>
+        </div>
+        <div class="mcp-tools">
+          <span>get_projects</span><span>create_project</span><span>get_timeline</span><span>import_media</span>
+          <span>add_clips</span><span>trim_clip</span><span>split_clip</span><span>move_clip</span><span>delete_clip</span>
+          <span>add_texts</span><span>list_effects</span><span>apply_effect</span><span>remove_effect</span><span>export_project</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= EFFECTS ======================= -->
+<section id="effects">
+  <div class="wrap center rv">
+    <p class="eyebrow">Shine bright</p>
+    <h2>Grades that used to need a colorist</h2>
+    <p class="lead">Twenty effects built on real ffmpeg filter chains — stack them per clip, preview the render, ship the mp4.</p>
+  </div>
+  <div class="marquee rv">
+    <div class="mq-track" id="mqTrack"></div>
+  </div>
+</section>
+
+<!-- ======================= THEMES ======================= -->
+<section>
+  <div class="wrap">
+    <div class="split">
+      <div class="rv">
+        <p class="eyebrow">Two grades, one gold</p>
+        <h2>Cinematic Obsidian.<br>Warm Ivory.</h2>
+        <p class="lead">The editor ships in two hand-tuned themes around a single amber accent —
+          the playhead, active buttons, and selected clips always glow gold.</p>
+        <ul class="checks">
+          <li><i>✓</i><span><b>Dark</b> — Rich Obsidian #0B0908, built for long sessions</span></li>
+          <li><i>✓</i><span><b>Light</b> — Warm Ivory &amp; Bronze, easy on daylight</span></li>
+          <li><i>✓</i><span><b>One click</b> — persists across launches</span></li>
+        </ul>
+      </div>
+      <div class="rv">
+        <div class="theme-demo">
+          <div class="theme-prev" id="tPrev">
+            <div class="tp-bar" id="tBar"><i></i><i></i><i></i></div>
+            <div class="tp-body" id="tBody">
+              <div class="tp-row" style="width:40%"></div>
+              <div class="tp-row" style="width:88%"></div>
+              <div class="tp-row" style="width:70%"></div>
+              <div class="tp-row accentbar" style="width:55%"></div>
+            </div>
+          </div>
+          <div class="theme-ctl">
+            <div class="seg">
+              <button class="on" id="tDark">Dark</button>
+              <button id="tLight">Light</button>
+            </div>
+            <div class="swatches">
+              <i class="on" style="background:#F59E0B" title="Amber Gold"></i>
+              <i style="background:#0B0908;border-color:var(--edge)" title="Obsidian"></i>
+              <i style="background:#24211F" title="Cocoa"></i>
+              <i style="background:#F5F2EF" title="Ivory"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= LOCAL / SECURITY ======================= -->
+<section id="local">
+  <div class="wrap">
+    <div class="split">
+      <div class="rv">
+        <div class="radar" id="radar">
+          <span class="sweep"></span>
+          <span class="core">▣</span>
+        </div>
+      </div>
+      <div class="rv">
+        <p class="eyebrow">Advanced privacy</p>
+        <h2>Your footage stays home</h2>
+        <p class="lead">Everything — media, projects, renders, even the AI — runs on your machine.
+          The only thing that ever travels is the MCP conversation you choose to expose.</p>
+        <ul class="checks">
+          <li><i>✓</i><span><b>No upload</b> — ffmpeg renders locally, files stay on disk</span></li>
+          <li><i>✓</i><span><b>Local LLM</b> — the built-in agent runs on Ollama</span></li>
+          <li><i>✓</i><span><b>You hold the URL</b> — tunnels are opt-in and ephemeral</span></li>
+          <li><i>✓</i><span><b>No account, no telemetry</b> — it's a .exe, not a SaaS</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= QUOTES ======================= -->
+<section>
+  <div class="wrap center rv">
+    <p class="eyebrow">Field reports</p>
+    <h2>What the agents are saying</h2>
+    <div class="quotes" style="text-align:left">
+      <div class="quote rv">
+        <p>"I imported nine clips, graded the opener <em>cinematic</em>, faded the closer, dropped a title, and exported —
+          in one conversation turn. This is the first timeline that treats me as the editor, not the plugin."</p>
+        <div class="qwho"><span class="qa">C</span><div><b>Claude Code</b><span>connected over MCP · 16 tools</span></div></div>
+      </div>
+      <div class="quote rv">
+        <p>"Zero cloud round-trips. I call <em>apply_effect</em>, ffmpeg answers in milliseconds on the same machine.
+          My tokens go to taste, not to waiting."</p>
+        <div class="qwho"><span class="qa">Q</span><div><b>qwen (local)</b><span>the in-app Ollama agent</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= CTA ======================= -->
+<section class="cta">
+  <span class="orb c"></span>
+  <div class="wrap rv">
+    <p class="eyebrow">Free · Local · Yours</p>
+    <h2>Start cutting today</h2>
+    <p class="lead" style="margin-left:auto;margin-right:auto">Launch the app, hand your agent the URL, and say what you want on screen.</p>
+    <div class="btns">
+      <a class="btn lg" href="#connect">Connect your agent</a>
+      <a class="btn lg outline" href="#how">Explore the tools</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <span class="brand" style="font-size:14px"><img class="mark" style="width:22px;height:22px;" src="favicon.png" alt="Source Montage Logo" /> Source Montage — part of the Source suite</span>
+    <div class="fl">
+      <a href="#connect">Connect</a><a href="#effects">Effects</a><a href="#local">Privacy</a>
+    </div>
+    <span>The editor + MCP server run on your machine. This page just hands you the command.</span>
+  </div>
+</footer>
+
+<script>
+var $=function(i){return document.getElementById(i)};
+
+/* ---------- hero demo cycle ---------- */
+var DEMOS=[
+  {name:"Travel Reel — Source Montage",chat:"Cut the beach clips into an 8-second reel, cinematic grade, fade out.",
+   fx:"✦ cinematic",clips:[["beach_01",34],["cliff_dive",26],["sunset",22]],audio:["waves.mp3",84]},
+  {name:"Product Promo — Source Montage",chat:"Ken Burns on the hero shot, glow the logo sting, add title \"Now Shipping\".",
+   fx:"✦ kenburns + glow",clips:[["hero_shot",40],["logo_sting",20],["b_roll",24]],audio:["synth_bed.mp3",84]},
+  {name:"Birthday Cut — Source Montage",chat:"Warm grade everything, sepia the old photos, fade in from black.",
+   fx:"✦ warm + sepia",clips:[["cake",28],["photos",30],["candles",26]],audio:["party.mp3",84]}
+];
+var di=0,typeTimer=null,cycleTimer=null;
+function runDemo(n){
+  di=n%DEMOS.length;var d=DEMOS[di];
+  var dots=$("dDots").children;for(var i=0;i<dots.length;i++)dots[i].className=i===di?"on":"";
+  $("dName").textContent=d.name;
+  $("dChat").textContent="";$("dCaret").style.display="inline-block";
+  $("dFx").className="fxchip";$("dStat").textContent="timeline empty";
+  var cl=["c1","c2","c3"];
+  for(var j=0;j<3;j++){var el=$(cl[j]);el.className="clip";el.style.width="0";el.textContent=""}
+  var a=$("c4");a.className="clip aclip";a.style.width="0";a.textContent="";
+  var hd=$("dHead");hd.style.transition="none";hd.style.left="1.5%";
+  clearInterval(typeTimer);var t=0;
+  typeTimer=setInterval(function(){
+    t++;$("dChat").textContent=d.chat.slice(0,t);
+    if(t>=d.chat.length){
+      clearInterval(typeTimer);$("dCaret").style.display="none";
+      $("dStat").innerHTML="<b>agent:</b> building timeline…";
+      d.clips.forEach(function(c,k){
+        setTimeout(function(){var el=$(cl[k]);el.className="clip in"+(k===0?" fx":"");
+          el.style.width=c[1]+"%";el.textContent=c[0]},350+k*420);
+      });
+      setTimeout(function(){a.className="clip aclip in";a.style.width=d.audio[1]+"%";a.textContent=d.audio[0]},350+3*420);
+      setTimeout(function(){$("dFx").textContent=d.fx;$("dFx").className="fxchip in";
+        $("dStat").innerHTML="<b>rendering</b> montage.mp4…";
+        hd.style.transition="left 3.4s linear";hd.style.left="94%"},2100);
+      setTimeout(function(){$("dStat").innerHTML="<b>✓ exported</b> montage.mp4"},5600);
+    }
+  },26);
+}
+for(var k=0;k<3;k++)(function(k){$("dDots").children[k].onclick=function(){clearTimeout(cycleTimer);runDemo(k);schedule()}})(k);
+function schedule(){cycleTimer=setTimeout(function(){runDemo(di+1);schedule()},9000)}
+runDemo(0);schedule();
+
+/* ---------- connect command ---------- */
+function norm(u){return(u||"").trim().replace(/\/+$/,"")}
+function gen(){var u=norm($("url").value)||"http://127.0.0.1:19790";
+  $("cmd").textContent="claude mcp add --transport http source-montage "+u+"/mcp";
+  if(norm($("url").value))localStorage.setItem("sm_url",norm($("url").value))}
+$("gen").onclick=gen;$("url").addEventListener("input",gen);
+var sv=localStorage.getItem("sm_url");if(sv){$("url").value=sv;gen()}
+$("copy").onclick=function(){navigator.clipboard.writeText($("cmd").textContent);
+  $("copy").textContent="Copied ✓";setTimeout(function(){$("copy").textContent="Copy"},1400)};
+
+/* ---------- effects marquee ---------- */
+var FX=["cinematic","glow","vignette","kenburns","sepia","vintage","grayscale","blur","sharpen","warm","cool",
+        "brighten","darken","contrast","saturate","desaturate","mirror","invert","fadein","fadeout"];
+var FILT={cinematic:"contrast(1.15) saturate(1.2)",glow:"brightness(1.25) blur(.5px)",vignette:"",kenburns:"",
+  sepia:"sepia(.85)",vintage:"sepia(.4) contrast(.9)",grayscale:"grayscale(1)",blur:"blur(2px)",sharpen:"contrast(1.3)",
+  warm:"sepia(.25) saturate(1.3)",cool:"hue-rotate(25deg)",brighten:"brightness(1.35)",darken:"brightness(.65)",
+  contrast:"contrast(1.5)",saturate:"saturate(2)",desaturate:"saturate(.4)",mirror:"",invert:"invert(1)",
+  fadein:"opacity(.55)",fadeout:"opacity(.35)"};
+var tr=$("mqTrack"),html="";
+[0,1].forEach(function(){FX.forEach(function(f){
+  var extra=f==="vignette"?"box-shadow:inset 0 0 26px 12px rgba(0,0,0,.75);":f==="mirror"?"transform:scaleX(-1);":"";
+  html+='<div class="fx-tile"><div class="sw" style="filter:'+(FILT[f]||"none")+';'+extra+'"></div><span>'+f+"</span></div>"})});
+tr.innerHTML=html;
+
+/* ---------- theme demo ---------- */
+function paintTheme(dark){
+  var pv=$("tPrev"),bd=$("tBody"),bar=$("tBar");
+  pv.style.background=dark?"#0B0908":"#FAF9F6";
+  pv.style.borderColor=dark?"#35312E":"#D0CBBF";
+  bar.style.borderColor=dark?"#35312E":"#D0CBBF";
+  var rows=bd.children;
+  for(var i=0;i<rows.length;i++){
+    rows[i].style.background=rows[i].classList.contains("accentbar")
+      ?(dark?"#F59E0B":"#D97706")
+      :(dark?"#24211F":"#E5E2DC");
+  }
+  var dots=bar.children;for(var j=0;j<dots.length;j++)dots[j].style.background=dark?"#35312E":"#D0CBBF";
+  $("tDark").className=dark?"on":"";$("tLight").className=dark?"":"on";
+}
+$("tDark").onclick=function(){paintTheme(true)};
+$("tLight").onclick=function(){paintTheme(false)};
+paintTheme(true);
+var sw=document.querySelectorAll(".swatches i");
+sw.forEach(function(s){s.onclick=function(){sw.forEach(function(x){x.classList.remove("on")});s.classList.add("on")}});
+
+/* ---------- radar rings + blips ---------- */
+(function(){var r=$("radar");
+  [86,66,46,26].forEach(function(p){var el=document.createElement("span");el.className="ring";
+    el.style.cssText="width:"+p+"%;height:"+p+"%;left:"+(50-p/2)+"%;top:"+(50-p/2)+"%";r.appendChild(el)});
+  [[68,30],[30,62],[74,70]].forEach(function(b,i){var el=document.createElement("span");el.className="blip";
+    el.style.cssText="left:"+b[0]+"%;top:"+b[1]+"%;animation-delay:"+i*0.8+"s";r.appendChild(el)});
+})();
+
+/* ---------- reveal on scroll ---------- */
+var io=new IntersectionObserver(function(es){es.forEach(function(e){
+  if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{threshold:.12});
+document.querySelectorAll(".rv").forEach(function(el){io.observe(el)});
+</script>
+</body>
+</html>

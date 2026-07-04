@@ -107,9 +107,12 @@ The marketing landing page (located in the `/studio` directory) is designed to b
 
 ---
 
-## 🔒 Configuration & API Keys
+## Stars History
 
-Environment keys and tokens are configured in the server's backend. To modify configurations, locate the constant variables at the top of `backend/server.py`:
-
-*   `MINIMAX_API_KEY`: API key for MiniMax image and video models.
-*   `REPLICATE_API_TOKEN`: API token for Replicate predictions.
+<a href="https://www.star-history.com/?type=date&repos=Source-Montage%2FSource-Design">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Source-Montage/Source-Montage&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Source-Montage/Source-Montage&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Source-Montage/Source-Montage&type=date&legend=top-left" />
+ </picture>
+</a>
